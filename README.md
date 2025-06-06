@@ -37,7 +37,7 @@ the command looks like this:
 mdns-repeater br0 wlan1
 ```
 
-> [!INFO]
+> [!NOTE]
 > Usage is shown with `mdns-repeater -h`
 
 ### Container
