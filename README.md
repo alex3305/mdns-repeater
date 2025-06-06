@@ -60,7 +60,7 @@ docker run -d \
            --name mdns-repeater \
            --network br0 \
            --network swarm-overlay \
-           mdns-repeater:latest eth0 eth1
+           mdns-repeater:latest -f eth0 eth1
 ```
 
 > [!TIP]
@@ -78,7 +78,7 @@ services:
     networks:
       swarm:
       ipvlan:
-    command: ["eth0", "eth1"]
+    command: ["-f", "eth0", "eth1"]
     cpus: 0.5
 
 networks:
@@ -150,7 +150,7 @@ Building is done with `make`.
 The container can be build with [`docker buildx build`](https://docs.docker.com/reference/cli/docker/buildx/):
 
 ```bash
-docker buildx build . -t mdns-reflector
+docker buildx build . -t mdns-repeater
 ```
 
 The Dockerfile consists of multiple stages. In the first stage the development

@@ -567,6 +567,9 @@ int main(int argc, char *argv[]) {
 		num_socks++;
 	}
 
+	// Print newline to flush buffer.
+	fprintf(stdout, "\n");
+
 	if (user) {
 		switch_user();
 	}
