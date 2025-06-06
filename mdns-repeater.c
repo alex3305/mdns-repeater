@@ -1,6 +1,7 @@
 /*
  * mdns-repeater.c - mDNS repeater daemon
  * Copyright (C) 2011 Darell Tan
+ * Copyright (C) 2025 Alex van den Hoogen
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -47,11 +48,11 @@
 #define MAX_SUBNETS 16
 
 struct if_sock {
-	const char *ifname;	/* interface name  */
-	int sockfd;		/* socket filedesc */
+	const char *ifname;		/* interface name  */
+	int sockfd;				/* socket filedesc */
 	struct in_addr addr;	/* interface addr  */
 	struct in_addr mask;	/* interface mask  */
-	struct in_addr net;	/* interface network (computed) */
+	struct in_addr net;		/* interface network (computed) */
 };
 
 struct subnet {
@@ -75,6 +76,7 @@ struct subnet whitelisted_subnets[MAX_SUBNETS];
 void *pkt_data = NULL;
 
 int foreground = 0;
+int debug_mode = 0;
 int shutdown_flag = 0;
 
 char *pid_file = PIDFILE;
@@ -91,7 +93,11 @@ void log_message(int loglevel, char *fmt_str, ...) {
 	buf[2047] = 0;
 
 	if (foreground) {
-		fprintf(stderr, "%s: %s\n", PACKAGE, buf);
+		if (loglevel < LOG_WARNING) {
+			fprintf(stderr, "%s: %s\n", PACKAGE, buf);
+		} else {
+			fprintf(stdout, "%s: %s\n", PACKAGE, buf);
+		}
 	} else {
 		syslog(loglevel, "%s", buf);
 	}
@@ -336,8 +342,9 @@ static void switch_user() {
 }
 
 static void show_help(const char *progname) {
-	fprintf(stderr, "mDNS repeater (version " HGVERSION ")\n");
+	fprintf(stderr, "mDNS repeater (version " GIT_REVISION ")\n");
 	fprintf(stderr, "Copyright (C) 2011 Darell Tan\n\n");
+	fprintf(stderr, "Copyright (C) 2025 Alex van den Hoogen\n\n");
 
 	fprintf(stderr, "usage: %s [ -f ] <ifdev> ...\n", progname);
 	fprintf(stderr, "\n"
@@ -346,7 +353,8 @@ static void show_help(const char *progname) {
 					"maximum number of interfaces is 5\n"
 					"\n"
 					" flags:\n"
-					"	-f	runs in foreground for debugging\n"
+					"	-f	run in foreground\n"
+					"	-x	run in foreground and print debug messages\n"
 					"	-b	blacklist subnet (eg. 192.168.1.1/24)\n"
 					"	-w	whitelist subnet (eg. 192.168.1.1/24)\n"
 					"	-p	specifies the pid file path (default: " PIDFILE ")\n"
@@ -411,10 +419,14 @@ static int parse_opts(int argc, char *argv[]) {
 	int help = 0;
 	struct subnet *ss;
 	char *msg;
-	while ((c = getopt(argc, argv, "hfp:b:w:u:")) != -1) {
+	while ((c = getopt(argc, argv, "hfxp:b:w:u:")) != -1) {
 		switch (c) {
 			case 'h': help = 1; break;
 			case 'f': foreground = 1; break;
+			case 'x':
+				foreground = 1;
+				debug_mode = 1;
+				break;
 			case 'p':
 				if (optarg[0] != '/')
 					log_message(LOG_ERR, "pid file path must be absolute");
@@ -629,7 +641,7 @@ int main(int argc, char *argv[]) {
 				}
 
 				if (!whitelisted_packet) {
-					if (foreground)
+					if (debug_mode)
 						printf("skipping packet from=%s size=%zd\n", inet_ntoa(fromaddr.sin_addr), recvsize);
 					continue;
 				}
@@ -644,13 +656,13 @@ int main(int argc, char *argv[]) {
 				}
 
 				if (blacklisted_packet) {
-					if (foreground)
+					if (debug_mode)
 						printf("skipping packet from=%s size=%zd\n", inet_ntoa(fromaddr.sin_addr), recvsize);
 					continue;
 				}
 			}
 
-			if (foreground)
+			if (debug_mode)
 				printf("data from=%s size=%zd\n", inet_ntoa(fromaddr.sin_addr), recvsize);
 
 			for (j = 0; j < num_socks; j++) {
@@ -658,7 +670,7 @@ int main(int argc, char *argv[]) {
 				if ((fromaddr.sin_addr.s_addr & socks[j].mask.s_addr) == socks[j].net.s_addr)
 					continue;
 
-				if (foreground)
+				if (debug_mode)
 					printf("repeating data to %s\n", socks[j].ifname);
 
 				// repeat data
