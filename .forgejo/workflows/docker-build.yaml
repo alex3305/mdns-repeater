@@ -51,4 +51,4 @@ jobs:
           push: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/mdns-repeater:latest
-            ${{ vars.GHCR_USERNAME }}/mdns-repeater:latest
+            ghcr.io/${{ vars.GHCR_USERNAME }}/mdns-repeater:latest
