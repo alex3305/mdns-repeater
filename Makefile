@@ -12,7 +12,7 @@ LDFLAGS := -s
 endif
 
 all: mdns-repeater
-	$(info Building mdns-repeater v$(VERSION))
+	$(info Building mdns-repeater version $(VERSION))
 
 mdns-repeater: mdns-repeater.o
 
