@@ -1,5 +1,5 @@
 /*
- * mdns-repeater.c - mDNS repeater daemon
+ * mdns-repeater.c - mDNS repeater
  * Copyright (C) 2011 Darell Tan
  * Copyright (C) 2025 Alex van den Hoogen
  *
@@ -342,8 +342,8 @@ static void switch_user() {
 }
 
 static void show_help(const char *progname) {
-	fprintf(stderr, "mDNS repeater (version " GIT_REVISION ")\n");
-	fprintf(stderr, "Copyright (C) 2011 Darell Tan\n\n");
+	fprintf(stderr, "mDNS repeater (version " VERSION ")\n");
+	fprintf(stderr, "Copyright (C) 2011 Darell Tan\n");
 	fprintf(stderr, "Copyright (C) 2025 Alex van den Hoogen\n\n");
 
 	fprintf(stderr, "usage: %s [ -f ] <ifdev> ...\n", progname);
