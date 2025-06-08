@@ -110,19 +110,15 @@ flags. Subnets are provided in the CIDR notation. These flags are exclusive to
 each other, but it is possible to provide multiple subnets. The maximum number
 of subnets that may be provided is 16.
 
-#### Advanced options
-
-These options are generally not necessary and are hidden by default.
-
 <details>
 <summary>Show advanced options</summary>
 
-##### Custom PID file
+#### Custom PID file
 
 A custom pid file path may be provided if the default isn't sufficient with
 `-p`. This should be an absolute path.
 
-##### Run as different user
+#### Run as different user
 
 With the `-u` flag it is possible to run mdns-repeater as another user.
 
@@ -147,17 +143,24 @@ Building is done with `make`.
 
 ### Container build
 
-The container can be build with [`docker buildx build`](https://docs.docker.com/reference/cli/docker/buildx/):
+The container can be build with [`docker buildx build`](https://docs.docker.com/reference/cli/docker/buildx/) or with `make`:
 
 ```bash
 docker buildx build . -t mdns-repeater
+# OR
+make docker
 ```
 
 The Dockerfile consists of multiple stages. In the first stage the development
 dependencies are installed and the application is built. In the second stage,
 the build result is copied into a fresh Alpine image to minimize size.
 
-### Versioning
+### Forgejo Actions
+
+Forgejo Actions is used to build the software on my personal Git server. These
+workflows are also included.
+
+## Versioning
 
 The version is automatically set through Git. If the current revision points
 to a tag, the tag name will be used as the application version. Otherwise a

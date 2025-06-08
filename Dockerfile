@@ -1,7 +1,7 @@
 # mDNS Repeater Docker image
-
 FROM alpine:3.22.0@sha256:08001109a7d679fe33b04fa51d681bd40b975d8f5cea8c3ef6c0eccb6a7338ce AS builder
 
+# Optional version, otherwise git tag or revision will be used.
 ARG VERSION
 
 # renovate: datasource=repology depName=alpine_3_22/git versioning=loose
@@ -39,4 +39,8 @@ LABEL \
     org.opencontainers.image.title="mDNS Repeater" \
     org.opencontainers.image.description="Containerized mDNS Repeater" \
     org.opencontainers.image.vendor="Alex van den Hoogen" \
-    org.opencontainers.image.authors="Alex van den Hoogen <alex@alxx.nl>"
+    org.opencontainers.image.authors="Alex van den Hoogen <alex@alxx.nl>" \
+    org.opencontainers.image.licenses="GPL-2.0-only" \
+    org.opencontainers.image.url="https://github.com/alex3305/mdns-repeater" \
+    org.opencontainers.image.documentation="https://github.com/alex3305/mdns-repeater" \
+    org.opencontainers.image.source="https://github.com/alex3305/mdns-repeater"

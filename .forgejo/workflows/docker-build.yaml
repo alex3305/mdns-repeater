@@ -6,6 +6,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
     types:
       - opened
@@ -18,9 +20,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - registry: hub.docker.com
+            registry_username: ${{ vars.DOCKERHUB_USERNAME }}
+            registry_token: ${{ secrets.DOCKERHUB_TOKEN }}
+            image: ${{ vars.DOCKERHUB_USERNAME }}/mdns-repeater
+          - registry: ghcr.io
+            registry_username: ${{ vars.GHCR_USERNAME }}
+            registry_token: ${{ secrets.GHCR_TOKEN }}
+            image: ghcr.io/${{ vars.GHCR_USERNAME }}/mdns-repeater
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: ⤵️ Checkout repository
         # yamllint disable-line rule:line-length
@@ -30,18 +50,18 @@ jobs:
         # yamllint disable-line rule:line-length
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
 
-      - name: 🔑 Login to Docker Hub
+      - name: 🔑 Login to Registry
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
-          username: ${{ vars.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ matrix.registry }}
+          username: ${{ matrix.registry_username }}
+          password: ${{ matrix.registry_token }}
 
-      - name: 🔑 Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+      - name: 💄 Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          registry: ghcr.io
-          username: ${{ vars.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          images: ${{ matrix.image }}
 
       - name: 👷 Docker Build and push latest
         # yamllint disable-line rule:line-length
@@ -49,6 +69,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ${{ vars.DOCKERHUB_USERNAME }}/mdns-repeater:latest
-            ghcr.io/${{ vars.GHCR_USERNAME }}/mdns-repeater:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
