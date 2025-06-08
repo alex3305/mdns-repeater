@@ -540,6 +540,9 @@ int main(int argc, char *argv[]) {
 		exit(2);
 	}
 
+	// Disable buffering for stdout
+	setbuf(stdout, NULL);
+
 	openlog(PACKAGE, LOG_PID | LOG_CONS, LOG_DAEMON);
 
 	// create receiving socket
@@ -566,9 +569,6 @@ int main(int argc, char *argv[]) {
 		}
 		num_socks++;
 	}
-
-	// Print newline to flush buffer.
-	fprintf(stdout, "\n");
 
 	if (user) {
 		switch_user();
