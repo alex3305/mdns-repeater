@@ -39,7 +39,7 @@ jobs:
             image: ghcr.io/${{ vars.GHCR_USERNAME }}/mdns-repeater
           - registry: 1d.lol
             registry_username: ${{ github.repository_owner }}
-            registry_token: ${{ secrets.FORGEJO_TOKEN }}
+            registry_token: ${{ secrets.LOCAL_PACKAGES_TOKEN }}
             image: 1d.lol/${{ github.repository }}
 
     permissions:
