@@ -38,10 +38,4 @@ CMD ["-h"]
 LABEL \
     maintainer="Alex van den Hoogen <alex@alxx.nl>" \
     org.opencontainers.image.title="mDNS Repeater" \
-    org.opencontainers.image.description="Containerized mDNS Repeater" \
-    org.opencontainers.image.vendor="Alex van den Hoogen" \
-    org.opencontainers.image.authors="Alex van den Hoogen <alex@alxx.nl>" \
-    org.opencontainers.image.licenses="GPL-2.0-only" \
-    org.opencontainers.image.url="https://github.com/alex3305/mdns-repeater" \
-    org.opencontainers.image.documentation="https://github.com/alex3305/mdns-repeater" \
-    org.opencontainers.image.source="https://github.com/alex3305/mdns-repeater"
+    org.opencontainers.image.description="Containerized mDNS Repeater"

@@ -21,14 +21,15 @@ concurrency:
 
 jobs:
   build-and-push:
+    name: Docker Build and Push ${{ vars.registry }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - registry: hub.docker.com
+          - registry: docker.io
             registry_username: ${{ vars.DOCKERHUB_USERNAME }}
             registry_token: ${{ secrets.DOCKERHUB_TOKEN }}
             image: ${{ vars.DOCKERHUB_USERNAME }}/mdns-repeater
@@ -62,6 +63,17 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ matrix.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+          # yamllint disable rule:line-length
+          labels: |
+            org.opencontainers.image.authors=Darell Tan, Alex van den Hoogen
+            org.opencontainers.image.documentation=https://github.com/alex3305/mdns-repeater
+            org.opencontainers.image.licenses=GPL-2.0-only
+            org.opencontainers.image.source=https://github.com/alex3305/mdns-repeater
+            org.opencontainers.image.url=https://github.com/alex3305/mdns-repeater
+            org.opencontainers.image.vendor=Alex van den Hoogen
+          # yamllint enable rule:line-length
 
       - name: 👷 Docker Build and push latest
         # yamllint disable-line rule:line-length
