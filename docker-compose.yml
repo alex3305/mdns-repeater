@@ -1,0 +1,21 @@
+---
+services:
+  mdns-repeater:
+    container_name: mdns-repeater-${SWARM_OVERLAY_NETWORK}-${VLAN_NETWORK}
+    image: ghcr.io/alex3305/mdns-repeater:latest
+    restart: on-failure:5
+    env_file: .env
+    command: ["-f", "eth0", "eth1"]
+    networks:
+      internal:
+      external:
+    cpus: 0.5
+
+networks:
+  internal:
+    name: ${INTERNAL_NETWORK}
+    external: true
+
+  external:
+    name: ${EXTERNAL_NETWORK}
+    external: true

@@ -1,0 +1,17 @@
+{
+    "cSpell.words": [
+      "daemonized",
+      "forgejo",
+      "linksys",
+      "mdns",
+      "zeroconf"
+    ],
+    "cSpell.ignoreWords": [
+      "buildx",
+      "cpus",
+      "darell",
+      "hoogen",
+      "ipvlan",
+      "wlan"
+    ]
+}

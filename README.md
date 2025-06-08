@@ -50,7 +50,7 @@ or [ipvlan](https://docs.docker.com/engine/network/drivers/ipvlan/) network.
 Although Host networking should be supported, this is not recommended because
 of possible port conflicts.
 
-#### Docker example
+#### Docker
 
 This is a very basic example bridging `br0` with `swarm-overlay`. Actual
 network names and options may differ.
@@ -60,35 +60,15 @@ docker run -d \
            --name mdns-repeater \
            --network br0 \
            --network swarm-overlay \
-           mdns-repeater:latest -f eth0 eth1
+           alex3305/mdns-repeater:latest -f eth0 eth1
 ```
+
+A [Docker Compose](./docker-compose.yml) example with [.env][./.env.example] is
+also available in the root of this repository.
 
 > [!TIP]
 > The container accepts the same arguments as running the application on
 > bare metal.
-
-#### Docker Compose example
-
-```yaml
-services:
-  mdns-overlay:
-    container_name: mdns-overlay
-    image: mdns-repeater:latest
-    restart: unless-stopped
-    networks:
-      swarm:
-      ipvlan:
-    command: ["-f", "eth0", "eth1"]
-    cpus: 0.5
-
-networks:
-  swarm:
-    name: swarm-overlay
-    external: true
-  ipvlan:
-    name: br0
-    external: true
-```
 
 ### Flags
 

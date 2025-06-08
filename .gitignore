@@ -168,5 +168,6 @@ $RECYCLE.BIN/
 ### Project specific
 mdns-repeater
 mdns-repeater-*.zip
+.env
 .revision
 tmp.*/
