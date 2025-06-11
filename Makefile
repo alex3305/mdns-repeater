@@ -2,7 +2,7 @@
 
 # Set default version to Git revision or tag
 VERSION ?= $(shell git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD)
-CFLAGS = -Wall -DVERSION="\"${VERSION}\""
+CFLAGS = -Wall -DVERSION="\"${VERSION}\"" -fms-extensions
 
 ifdef DEBUG
 CFLAGS += -g

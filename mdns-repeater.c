@@ -40,25 +40,19 @@
 #define MDNS_ADDR "224.0.0.251"
 #define MDNS_PORT 5353
 
-#ifndef PIDFILE
-#define PIDFILE "/var/run/" PACKAGE ".pid"
-#endif
-
 #define MAX_SOCKS 16
 #define MAX_SUBNETS 16
-
-struct if_sock {
-	const char *ifname;		/* interface name  */
-	int sockfd;				/* socket filedesc */
-	struct in_addr addr;	/* interface addr  */
-	struct in_addr mask;	/* interface mask  */
-	struct in_addr net;		/* interface network (computed) */
-};
 
 struct subnet {
 	struct in_addr addr;    /* subnet addr */
 	struct in_addr mask;    /* subnet mask */
 	struct in_addr net;     /* subnet net (computed) */
+};
+
+struct if_sock {
+	const char *ifname;		/* interface name  */
+	int sockfd;				/* socket filedesc */
+	struct subnet;			/* Extend subnet struct */
 };
 
 int server_sockfd = -1;
@@ -75,13 +69,8 @@ struct subnet whitelisted_subnets[MAX_SUBNETS];
 #define PACKET_SIZE 65536
 void *pkt_data = NULL;
 
-int foreground = 0;
 int debug_mode = 0;
 int shutdown_flag = 0;
-
-char *pid_file = PIDFILE;
-
-const struct passwd* user = NULL;
 
 void log_message(int loglevel, char *fmt_str, ...) {
 	va_list ap;
@@ -92,15 +81,35 @@ void log_message(int loglevel, char *fmt_str, ...) {
 	va_end(ap);
 	buf[2047] = 0;
 
-	if (foreground) {
-		if (loglevel < LOG_WARNING) {
-			fprintf(stderr, "%s: %s\n", PACKAGE, buf);
-		} else {
-			fprintf(stdout, "%s: %s\n", PACKAGE, buf);
-		}
+	if (loglevel < LOG_WARNING) {
+		fprintf(stderr, "%s: %s\n", PACKAGE, buf);
 	} else {
-		syslog(loglevel, "%s", buf);
+		fprintf(stdout, "%s: %s\n", PACKAGE, buf);
 	}
+}
+
+static void log_addr_subnet(struct subnet *s) {
+	char *addr_str = strdup(inet_ntoa(s->addr));
+	char *mask_str = strdup(inet_ntoa(s->mask));
+	char *net_str = strdup(inet_ntoa(s->net));
+
+	log_message(LOG_INFO, "addr %s mask %s net %s", addr_str, mask_str, net_str);
+
+	free(addr_str);
+	free(mask_str);
+	free(net_str);
+}
+
+static void log_addr_interface(struct if_sock *s) {
+	char *addr_str = strdup(inet_ntoa(s->addr));
+	char *mask_str = strdup(inet_ntoa(s->mask));
+	char *net_str  = strdup(inet_ntoa(s->net));
+
+	log_message(LOG_INFO, "dev %s addr %s mask %s net %s", s->ifname, addr_str, mask_str, net_str);
+
+	free(addr_str);
+	free(mask_str);
+	free(net_str);
 }
 
 static int create_recv_sock() {
@@ -225,14 +234,7 @@ static int create_send_sock(int recv_sockfd, const char *ifname, struct if_sock 
 		return r;
 	}
 
-	char *addr_str = strdup(inet_ntoa(sockdata->addr));
-	char *mask_str = strdup(inet_ntoa(sockdata->mask));
-	char *net_str  = strdup(inet_ntoa(sockdata->net));
-	log_message(LOG_INFO, "dev %s addr %s mask %s net %s", ifr.ifr_name, addr_str, mask_str, net_str);
-	free(addr_str);
-	free(mask_str);
-	free(net_str);
-
+	log_addr_interface(sockdata);
 	return sd;
 }
 
@@ -248,117 +250,21 @@ static ssize_t send_packet(int fd, const void *data, size_t len) {
 	return sendto(fd, data, len, 0, (struct sockaddr *) &toaddr, sizeof(struct sockaddr_in));
 }
 
-static void mdns_repeater_shutdown(int sig) {
-	(void)sig;
-	shutdown_flag = 1;
-}
-
-static pid_t already_running() {
-	FILE *f;
-	int count;
-	pid_t pid;
-
-	f = fopen(pid_file, "r");
-	if (f != NULL) {
-		count = fscanf(f, "%d", &pid);
-		fclose(f);
-		if (count == 1) {
-			if (kill(pid, 0) == 0)
-				return pid;
-		}
-	}
-
-	return -1;
-}
-
-static int write_pidfile() {
-	FILE *f;
-	int r;
-
-	f = fopen(pid_file, "w");
-	if (f != NULL) {
-		r = fprintf(f, "%d", getpid());
-		fclose(f);
-		return (r > 0);
-	}
-
-	return 0;
-}
-
-static void daemonize() {
-	pid_t running_pid;
-	pid_t pid = fork();
-	if (pid < 0) {
-		log_message(LOG_ERR, "fork(): %s", strerror(errno));
-		exit(1);
-	}
-
-	// exit parent process
-	if (pid > 0)
-		exit(0);
-
-	// signals
-	signal(SIGCHLD, SIG_IGN);
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGTERM, mdns_repeater_shutdown);
-
-	setsid();
-	umask(0027);
-	if (chdir("/") < 0) {
-		log_message(LOG_ERR, "unable to change to root directory");
-		exit(1);
-	}
-
-	// close all std fd and reopen /dev/null for them
-	int i;
-	for (i = 0; i < 3; i++) {
-		close(i);
-		if (open("/dev/null", O_RDWR) != i) {
-			log_message(LOG_ERR, "unable to open /dev/null for fd %d", i);
-			exit(1);
-		}
-	}
-
-	// check for pid file
-	running_pid = already_running();
-	if (running_pid != -1) {
-		log_message(LOG_ERR, "already running as pid %d", running_pid);
-		exit(1);
-	} else if (! write_pidfile()) {
-		log_message(LOG_ERR, "unable to write pid file %s", pid_file);
-		exit(1);
-	}
-}
-
-static void switch_user() {
-	errno = 0;
-	if (setgid(user->pw_gid) != 0) {
-		log_message(LOG_ERR, "Failed to switch to group %d - %s", user->pw_gid, strerror(errno));
-		exit(2);
-	} else if (setuid(user->pw_uid) != 0) {
-		log_message(LOG_ERR, "Failed to switch to user %s (%d) - %s", user->pw_name, user->pw_uid, strerror(errno));
-		exit(2);
-	}
-}
-
 static void show_help(const char *progname) {
 	fprintf(stderr, "mDNS repeater (version " VERSION ")\n");
 	fprintf(stderr, "Copyright (C) 2011 Darell Tan\n");
 	fprintf(stderr, "Copyright (C) 2025 Alex van den Hoogen\n\n");
 
-	fprintf(stderr, "usage: %s [ -f ] <ifdev> ...\n", progname);
+	fprintf(stderr, "usage: %s [ -x ] <ifdev> ...\n", progname);
 	fprintf(stderr, "\n"
 					"<ifdev> specifies an interface like \"eth0\"\n"
 					"packets received on an interface is repeated across all other specified interfaces\n"
 					"maximum number of interfaces is 5\n"
 					"\n"
 					" flags:\n"
-					"	-f	run in foreground\n"
-					"	-x	run in foreground and print debug messages\n"
+					"	-x	print debug messages\n"
 					"	-b	blacklist subnet (eg. 192.168.1.1/24)\n"
 					"	-w	whitelist subnet (eg. 192.168.1.1/24)\n"
-					"	-p	specifies the pid file path (default: " PIDFILE ")\n"
-					"	-u	run as this user (by name)\n"
 					"	-h	shows this help\n"
 					"\n"
 		);
@@ -402,18 +308,6 @@ int parse(char *input, struct subnet *s) {
 	return 0;
 }
 
-int tostring(struct subnet *s, char* buf, int len) {
-	char *addr_str = strdup(inet_ntoa(s->addr));
-	char *mask_str = strdup(inet_ntoa(s->mask));
-	char *net_str = strdup(inet_ntoa(s->net));
-	int l = snprintf(buf, len, "addr %s mask %s net %s", addr_str, mask_str, net_str);
-	free(addr_str);
-	free(mask_str);
-	free(net_str);
-
-	return l;
-}
-
 static int parse_opts(int argc, char *argv[]) {
 	int c, res;
 	int help = 0;
@@ -422,17 +316,7 @@ static int parse_opts(int argc, char *argv[]) {
 	while ((c = getopt(argc, argv, "hfxp:b:w:u:")) != -1) {
 		switch (c) {
 			case 'h': help = 1; break;
-			case 'f': foreground = 1; break;
-			case 'x':
-				foreground = 1;
-				debug_mode = 1;
-				break;
-			case 'p':
-				if (optarg[0] != '/')
-					log_message(LOG_ERR, "pid file path must be absolute");
-				else
-					pid_file = optarg;
-				break;
+			case 'x': debug_mode = 1; break;
 
 			case 'b':
 				if (num_blacklisted_subnets >= MAX_SUBNETS) {
@@ -463,8 +347,10 @@ static int parse_opts(int argc, char *argv[]) {
 
 				msg = malloc(128);
 				memset(msg, 0, 128);
-				tostring(ss, msg, 128);
+
+				log_addr_subnet(ss);
 				log_message(LOG_INFO, "blacklist %s", msg);
+
 				free(msg);
 				break;
 			case 'w':
@@ -496,22 +382,16 @@ static int parse_opts(int argc, char *argv[]) {
 
 				msg = malloc(128);
 				memset(msg, 0, 128);
-				tostring(ss, msg, 128);
+
+				log_addr_subnet(ss);
 				log_message(LOG_INFO, "whitelist %s", msg);
+
 				free(msg);
 				break;
 			case '?':
 			case ':':
 				fputs("\n", stderr);
 				break;
-
-			case 'u': {
-				if ((user = getpwnam(optarg)) == NULL) {
-					log_message(LOG_ERR, "No such user '%s'", optarg);
-					exit(2);
-				}
-				break;
-			}
 
 			default:
 				log_message(LOG_ERR, "unknown option %c", optopt);
@@ -527,10 +407,28 @@ static int parse_opts(int argc, char *argv[]) {
 	return optind;
 }
 
+int main_end(int r) {
+	if (pkt_data != NULL) {
+		free(pkt_data);
+	}
+
+	if (server_sockfd >= 0) {
+		close(server_sockfd);
+	}
+
+	for (int i = 0; i < num_socks; i++) {
+		close(socks[i].sockfd);
+	}
+
+	log_message(LOG_INFO, "Exit.");
+	return r;
+}
+
 int main(int argc, char *argv[]) {
-	pid_t running_pid;
 	fd_set sockfd_set;
-	int r = 0;
+
+	// Disable buffering for stdout
+	setbuf(stdout, NULL);
 
 	parse_opts(argc, argv);
 
@@ -540,17 +438,11 @@ int main(int argc, char *argv[]) {
 		exit(2);
 	}
 
-	// Disable buffering for stdout
-	setbuf(stdout, NULL);
-
-	openlog(PACKAGE, LOG_PID | LOG_CONS, LOG_DAEMON);
-
 	// create receiving socket
 	server_sockfd = create_recv_sock();
 	if (server_sockfd < 0) {
 		log_message(LOG_ERR, "unable to create server socket");
-		r = 1;
-		goto end_main;
+		return main_end(1);
 	}
 
 	// create sending sockets
@@ -564,35 +456,19 @@ int main(int argc, char *argv[]) {
 		int sockfd = create_send_sock(server_sockfd, argv[i], &socks[num_socks]);
 		if (sockfd < 0) {
 			log_message(LOG_ERR, "unable to create socket for interface %s", argv[i]);
-			r = 1;
-			goto end_main;
+			return main_end(1);
 		}
+
 		num_socks++;
-	}
-
-	if (user) {
-		switch_user();
-	}
-
-	if (! foreground)
-		daemonize();
-	else {
-		// check for pid file when running in foreground
-		running_pid = already_running();
-		if (running_pid != -1) {
-			log_message(LOG_ERR, "already running as pid %d", running_pid);
-			exit(1);
-		}
 	}
 
 	pkt_data = malloc(PACKET_SIZE);
 	if (pkt_data == NULL) {
 		log_message(LOG_ERR, "cannot malloc() packet buffer: %s", strerror(errno));
-		r = 1;
-		goto end_main;
+		return main_end(1);
 	}
 
-	while (! shutdown_flag) {
+	while (!shutdown_flag) {
 		struct timeval tv = {
 			.tv_sec = 10,
 			.tv_usec = 0,
@@ -689,24 +565,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	log_message(LOG_INFO, "shutting down...");
-
-end_main:
-
-	if (pkt_data != NULL)
-		free(pkt_data);
-
-	if (server_sockfd >= 0)
-		close(server_sockfd);
-
-	for (i = 0; i < num_socks; i++)
-		close(socks[i].sockfd);
-
-	// remove pid file if it belongs to us
-	if (already_running() == getpid())
-		unlink(pid_file);
-
-	log_message(LOG_INFO, "exit.");
-
-	return r;
+	log_message(LOG_INFO, "Shutting down...");
+	return main_end(0);
 }

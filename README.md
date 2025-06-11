@@ -149,6 +149,7 @@ shortened revision hash is used.
 ## License
 
 Copyright (C) 2011 Darell Tan
+
 Copyright (C) 2025 Alex van den Hoogen
 
 This program is free software distributed under the
