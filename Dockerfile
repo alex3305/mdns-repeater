@@ -6,7 +6,7 @@ FROM alpine:3.22.0@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be02
 ARG VERSION
 
 # renovate: datasource=repology depName=alpine_3_22/git versioning=loose
-ARG GIT_VERSION=2.49.0-r0
+ARG GIT_VERSION=2.49.1-r0
 # renovate: datasource=repology depName=alpine_3_22/gcc versioning=loose
 ARG GCC_VERSION=14.2.0-r6
 # renovate: datasource=repology depName=alpine_3_22/musl-dev versioning=loose
