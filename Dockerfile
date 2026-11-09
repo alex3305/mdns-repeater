@@ -1,6 +1,6 @@
 # mDNS Repeater Docker image
 
-FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4 AS builder
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS builder
 
 # Optional version, otherwise git tag or revision will be used.
 ARG VERSION
@@ -26,7 +26,7 @@ RUN apk add --no-cache git="${GIT_VERSION}" \
     && \
     make
 
-FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 
 COPY --from=builder --chmod=0555 /root/mdns-repeater /usr/local/bin/
 
